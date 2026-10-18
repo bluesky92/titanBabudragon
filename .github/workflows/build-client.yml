@@ -80,8 +80,12 @@ jobs:
         run: |
           # Tạo thư mục đích trong mã nguồn dự án
           New-Item -ItemType Directory -Force -Path "Src/ThirdParty/DirectX9/Lib/x64" | Out-Null
+          # 1. Copy file DxErr.lib và ĐỔI TÊN thành DxErr9.lib
+          Copy-Item "C:\deps\dxsdk\Lib\x64\DxErr.lib" -Destination "$dest\DxErr9.lib" -Force
           # Copy file thư viện từ SDK đã giải nén vào
           Copy-Item "C:\deps\dxsdk\Lib\x64\*.lib" -Destination "Src/ThirdParty/DirectX9/Lib/x64/" -Force
+          Write-Host "=== ĐÃ COPY VÀ ĐỔI TÊN THÀNH CÔNG ==="
+          Get-ChildItem -Path $dest | Select-Object Name
       - name: Configure
         shell: pwsh
         run: |
