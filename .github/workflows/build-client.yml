@@ -52,33 +52,29 @@ jobs:
             C:/deps/dxredist
           key: sdk-v1-${{ runner.os }}
 
-      - name: Download third-party SDKs
+           - name: Download third-party SDKs
         if: steps.sdk-cache.outputs.cache-hit != 'true'
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path C:\deps | Out-Null
 
-          if (-not $env:FMOD_SDK_URL) { throw "Missing secret FMOD_SDK_URL" }
-          if (-not $env:DXSDK_URL)    { throw "Missing secret DXSDK_URL" }
-          if (-not $env:CG_SDK_URL)   { throw "Missing secret CG_SDK_URL" }
-
-          Invoke-WebRequest $env:FMOD_SDK_URL -OutFile $env:TEMP\fmod.zip
-          Expand-Archive $env:TEMP\fmod.zip -DestinationPath C:\deps\fmod -Force
-
-          # DirectX SDK June 2010 là file .exe tự giải nén
-          Invoke-WebRequest $env:DXSDK_URL -OutFile $env:TEMP\dxsdk.exe
-          Start-Process $env:TEMP\dxsdk.exe `
-            -ArgumentList "/Q","/T:C:\deps\dxsdk" -Wait
-
-          Invoke-WebRequest $env:CG_SDK_URL -OutFile $env:TEMP\cg.zip
-          Expand-Archive $env:TEMP\cg.zip -DestinationPath C:\deps\cg -Force
-
-          if ($env:DXREDIST_URL) {
-            Invoke-WebRequest $env:DXREDIST_URL -OutFile $env:TEMP\dxredist.exe
-            Start-Process $env:TEMP\dxredist.exe `
-              -ArgumentList "/Q","/T:C:\deps\dxredist" -Wait
+          # Hàm tải file bằng curl với Token
+          function Download-PrivateAsset($url, $outFile) {
+              if (-not $url) { throw "URL bị thiếu!" }
+              curl.exe -L -H "Authorization: token ${{ secrets.SDK_PAT }}" -o $outFile $url
           }
 
+          # 1. Tải và giải nén FMOD
+          Download-PrivateAsset "${{ secrets.FMOD_SDK_URL }}" "$env:TEMP\fmod.zip"
+          Expand-Archive $env:TEMP\fmod.zip -DestinationPath C:\deps\fmod -Force
+
+          # 2. Tải và giải nén DirectX SDK
+          Download-PrivateAsset "${{ secrets.DXSDK_URL }}" "$env:TEMP\dxsdk.zip"
+          Expand-Archive $env:TEMP\dxsdk.zip -DestinationPath C:\deps\dxsdk -Force
+
+          # 3. Tải và giải nén Cg Toolkit
+          Download-PrivateAsset "${{ secrets.CG_SDK_URL }}" "$env:TEMP\cg.zip"
+          Expand-Archive $env:TEMP\cg.zip -DestinationPath C:\deps\cg -Force
       - name: Sanity check SDKs
         shell: pwsh
         run: |
