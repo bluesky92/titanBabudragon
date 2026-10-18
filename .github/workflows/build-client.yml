@@ -67,7 +67,7 @@ jobs:
         run: |
           $need = @(
             "C:\deps\fmod\api\core\inc\fmod.h",
-            "C:\deps\fmod\api\core\lib\fmod_vc.lib",
+            "C:\deps\fmod\api\core\lib\x64\fmod_vc.lib",
             "C:\deps\dxsdk\Include\d3d9.h",
             "C:\deps\dxsdk\Lib\x64\d3d9.lib",
             "C:\deps\cg\include\Cg\cg.h"
@@ -83,7 +83,7 @@ jobs:
             -DCMAKE_BUILD_TYPE=Release `
             -DFMOD_ROOT="C:/deps/fmod" `
             -DFMOD_INCLUDE_DIR="C:/deps/fmod/api/core/inc" `
-            -DFMOD_LIBRARY="C:/deps/fmod/api/core/lib/fmod_vc.lib" `
+            -DFMOD_LIBRARY="C:/deps/fmod/api/core/lib/x64/fmod_vc.lib" `
             -DDXSDK_DIR="C:/deps/dxsdk" `
             -DCYS_CG_DLL="C:/deps/cg/bin/cg.dll" `
             -DCG_INCLUDE_DIR="C:/deps/cg/include" `
@@ -98,7 +98,7 @@ jobs:
         run: |
           $out = Join-Path $env:BUILD_DIR "bin"
           New-Item -ItemType Directory -Force -Path $out | Out-Null
-          Copy-Item C:\deps\fmod\api\core\lib\fmod.dll $out -ErrorAction SilentlyContinue
+          Copy-Item C:\deps\fmod\api\core\lib\x64\fmod.dll $out -ErrorAction SilentlyContinue
           Copy-Item C:\deps\cg\bin\cg.dll $out -ErrorAction SilentlyContinue
           Copy-Item C:\deps\cg\bin\cgGL.dll $out -ErrorAction SilentlyContinue
           if (Test-Path C:\deps\dxredist) {
