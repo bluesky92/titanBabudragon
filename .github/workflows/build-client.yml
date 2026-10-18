@@ -75,7 +75,13 @@ jobs:
           foreach ($f in $need) {
             if (-not (Test-Path $f)) { throw "Thiếu file: $f" }
           }
-
+      - name: Inject DirectX Libs into Project
+        shell: pwsh
+        run: |
+          # Tạo thư mục đích trong mã nguồn dự án
+          New-Item -ItemType Directory -Force -Path "Src/ThirdParty/DirectX9/Lib/x64" | Out-Null
+          # Copy file thư viện từ SDK đã giải nén vào
+          Copy-Item "C:\deps\dxsdk\Lib\x64\d3dx9.lib" -Destination "Src/ThirdParty/DirectX9/Lib/x64/" -Force
       - name: Configure
         shell: pwsh
         run: |
