@@ -44,25 +44,22 @@ jobs:
             C:/deps/cg
             C:/deps/dxredist
           key: sdk-v1-${{ runner.os }}
-
       - name: Download third-party SDKs
         if: steps.sdk-cache.outputs.cache-hit != 'true'
         shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
           New-Item -ItemType Directory -Force -Path C:\deps | Out-Null
 
-          function Download-PrivateAsset($url, $outFile) {
-              if (-not $url) { throw "URL bị thiếu!" }
-              curl.exe -L -H "Authorization: token ${{ secrets.SDK_PAT }}" -o $outFile $url
-          }
+          # Tải các file bằng GitHub CLI (gh) - Tự động xác thực
+          gh release download v1 --repo bluesky92/my-private-sdks --pattern "fmod_api.zip" --output "$env:TEMP\fmod.zip" --clobber
+          gh release download v1 --repo bluesky92/my-private-sdks --pattern "dxsdk_jun10.zip" --output "$env:TEMP\dxsdk.zip" --clobber
+          gh release download v1 --repo bluesky92/my-private-sdks --pattern "cg_toolkit.zip" --output "$env:TEMP\cg.zip" --clobber
 
-          Download-PrivateAsset "${{ secrets.FMOD_SDK_URL }}" "$env:TEMP\fmod.zip"
+          # Giải nén
           Expand-Archive $env:TEMP\fmod.zip -DestinationPath C:\deps\fmod -Force
-
-          Download-PrivateAsset "${{ secrets.DXSDK_URL }}" "$env:TEMP\dxsdk.zip"
           Expand-Archive $env:TEMP\dxsdk.zip -DestinationPath C:\deps\dxsdk -Force
-
-          Download-PrivateAsset "${{ secrets.CG_SDK_URL }}" "$env:TEMP\cg.zip"
           Expand-Archive $env:TEMP\cg.zip -DestinationPath C:\deps\cg -Force
 
       - name: Sanity check SDKs
