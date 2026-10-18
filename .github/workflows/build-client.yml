@@ -79,7 +79,7 @@ jobs:
       - name: Configure
         shell: pwsh
         run: |
-          cmake -S . -B $env:BUILD_DIR -G Ninja `
+          cmake -S Src -B $env:BUILD_DIR -G Ninja `
             -DCMAKE_BUILD_TYPE=Release `
             -DFMOD_ROOT="C:/deps/fmod" `
             -DFMOD_INCLUDE_DIR="C:/deps/fmod/api/core/inc" `
