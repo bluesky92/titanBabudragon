@@ -13,12 +13,6 @@ jobs:
 
     env:
       BUILD_DIR: build
-      # Bạn phải tạo 3 secret trỏ tới nơi lưu SDK của riêng bạn
-      FMOD_SDK_URL: ${{ secrets.FMOD_SDK_URL }}
-      DXSDK_URL:   ${{ secrets.DXSDK_URL }}
-      CG_SDK_URL:  ${{ secrets.CG_SDK_URL }}
-      # Đường dẫn D3DX runtime (d3dx9_43.dll / D3DCompiler_43.dll)
-      DXREDIST_URL: ${{ secrets.DXREDIST_URL }}
 
     steps:
       - name: Checkout
@@ -40,7 +34,6 @@ jobs:
         with:
           python-version: '3.11'
 
-      # Cache SDK — lần build sau nhanh hơn ~5 phút
       - name: Cache third-party SDKs
         id: sdk-cache
         uses: actions/cache@v4
@@ -52,29 +45,26 @@ jobs:
             C:/deps/dxredist
           key: sdk-v1-${{ runner.os }}
 
-           - name: Download third-party SDKs
+      - name: Download third-party SDKs
         if: steps.sdk-cache.outputs.cache-hit != 'true'
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path C:\deps | Out-Null
 
-          # Hàm tải file bằng curl với Token
           function Download-PrivateAsset($url, $outFile) {
               if (-not $url) { throw "URL bị thiếu!" }
               curl.exe -L -H "Authorization: token ${{ secrets.SDK_PAT }}" -o $outFile $url
           }
 
-          # 1. Tải và giải nén FMOD
           Download-PrivateAsset "${{ secrets.FMOD_SDK_URL }}" "$env:TEMP\fmod.zip"
           Expand-Archive $env:TEMP\fmod.zip -DestinationPath C:\deps\fmod -Force
 
-          # 2. Tải và giải nén DirectX SDK
           Download-PrivateAsset "${{ secrets.DXSDK_URL }}" "$env:TEMP\dxsdk.zip"
           Expand-Archive $env:TEMP\dxsdk.zip -DestinationPath C:\deps\dxsdk -Force
 
-          # 3. Tải và giải nén Cg Toolkit
           Download-PrivateAsset "${{ secrets.CG_SDK_URL }}" "$env:TEMP\cg.zip"
           Expand-Archive $env:TEMP\cg.zip -DestinationPath C:\deps\cg -Force
+
       - name: Sanity check SDKs
         shell: pwsh
         run: |
@@ -86,13 +76,12 @@ jobs:
             "C:\deps\cg\include\Cg\cg.h"
           )
           foreach ($f in $need) {
-            if (-not (Test-Path $f)) { throw "Thiếu: $f" }
+            if (-not (Test-Path $f)) { throw "Thiếu file: $f" }
           }
 
       - name: Configure
         shell: pwsh
         run: |
-          # ⚠️ Sửa các -D... cho khớp biến trong CMakeLists.txt của repo
           cmake -S . -B $env:BUILD_DIR -G Ninja `
             -DCMAKE_BUILD_TYPE=Release `
             -DFMOD_ROOT="C:/deps/fmod" `
