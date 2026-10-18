@@ -107,6 +107,20 @@ jobs:
           Get-ChildItem -Path $dxDest | Select-Object Name
           Write-Host "=== KIỂM TRA FMOD ==="
           Get-ChildItem -Path (Join-Path $fmodDest "api\core") | Select-Object Name
+      - name: Auto-fix case-sensitive include typos
+        shell: pwsh
+        run: |
+          # Tìm tất cả file .cpp và .h trong thư mục Src/Engine/WXEngine
+          $files = Get-ChildItem -Path "Src/Engine/WXEngine" -Recurse -Include *.cpp,*.h
+          foreach ($file in $files) {
+              $content = Get-Content $file.FullName -Raw
+              # Sửa lỗi gõ hoa lung tung
+              if ($content -match "TDGameINTerFace\.h") {
+                  $content = $content -replace "TDGameINTerFace\.h", "TDGameInterface.h"
+                  Set-Content -Path $file.FullName -Value $content -NoNewline
+                  Write-Host "Đã sửa lỗi typo trong file: $($file.Name)"
+              }
+          }
       - name: Configure
         shell: pwsh
         run: |
