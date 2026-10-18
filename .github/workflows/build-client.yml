@@ -1,0 +1,134 @@
+name: Build 372dragon Client (x64)
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-2022
+    timeout-minutes: 90
+
+    env:
+      BUILD_DIR: build
+      # Bạn phải tạo 3 secret trỏ tới nơi lưu SDK của riêng bạn
+      FMOD_SDK_URL: ${{ secrets.FMOD_SDK_URL }}
+      DXSDK_URL:   ${{ secrets.DXSDK_URL }}
+      CG_SDK_URL:  ${{ secrets.CG_SDK_URL }}
+      # Đường dẫn D3DX runtime (d3dx9_43.dll / D3DCompiler_43.dll)
+      DXREDIST_URL: ${{ secrets.DXREDIST_URL }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          lfs: true
+
+      - name: Setup MSVC (x64)
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Setup CMake & Ninja
+        uses: lukka/get-cmake@latest
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # Cache SDK — lần build sau nhanh hơn ~5 phút
+      - name: Cache third-party SDKs
+        id: sdk-cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            C:/deps/fmod
+            C:/deps/dxsdk
+            C:/deps/cg
+            C:/deps/dxredist
+          key: sdk-v1-${{ runner.os }}
+
+      - name: Download third-party SDKs
+        if: steps.sdk-cache.outputs.cache-hit != 'true'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path C:\deps | Out-Null
+
+          if (-not $env:FMOD_SDK_URL) { throw "Missing secret FMOD_SDK_URL" }
+          if (-not $env:DXSDK_URL)    { throw "Missing secret DXSDK_URL" }
+          if (-not $env:CG_SDK_URL)   { throw "Missing secret CG_SDK_URL" }
+
+          Invoke-WebRequest $env:FMOD_SDK_URL -OutFile $env:TEMP\fmod.zip
+          Expand-Archive $env:TEMP\fmod.zip -DestinationPath C:\deps\fmod -Force
+
+          # DirectX SDK June 2010 là file .exe tự giải nén
+          Invoke-WebRequest $env:DXSDK_URL -OutFile $env:TEMP\dxsdk.exe
+          Start-Process $env:TEMP\dxsdk.exe `
+            -ArgumentList "/Q","/T:C:\deps\dxsdk" -Wait
+
+          Invoke-WebRequest $env:CG_SDK_URL -OutFile $env:TEMP\cg.zip
+          Expand-Archive $env:TEMP\cg.zip -DestinationPath C:\deps\cg -Force
+
+          if ($env:DXREDIST_URL) {
+            Invoke-WebRequest $env:DXREDIST_URL -OutFile $env:TEMP\dxredist.exe
+            Start-Process $env:TEMP\dxredist.exe `
+              -ArgumentList "/Q","/T:C:\deps\dxredist" -Wait
+          }
+
+      - name: Sanity check SDKs
+        shell: pwsh
+        run: |
+          $need = @(
+            "C:\deps\fmod\api\core\inc\fmod.h",
+            "C:\deps\fmod\api\core\lib\fmod_vc.lib",
+            "C:\deps\dxsdk\Include\d3d9.h",
+            "C:\deps\dxsdk\Lib\x64\d3d9.lib",
+            "C:\deps\cg\include\Cg\cg.h"
+          )
+          foreach ($f in $need) {
+            if (-not (Test-Path $f)) { throw "Thiếu: $f" }
+          }
+
+      - name: Configure
+        shell: pwsh
+        run: |
+          # ⚠️ Sửa các -D... cho khớp biến trong CMakeLists.txt của repo
+          cmake -S . -B $env:BUILD_DIR -G Ninja `
+            -DCMAKE_BUILD_TYPE=Release `
+            -DFMOD_ROOT="C:/deps/fmod" `
+            -DFMOD_INCLUDE_DIR="C:/deps/fmod/api/core/inc" `
+            -DFMOD_LIBRARY="C:/deps/fmod/api/core/lib/fmod_vc.lib" `
+            -DDXSDK_DIR="C:/deps/dxsdk" `
+            -DCYS_CG_DLL="C:/deps/cg/bin/cg.dll" `
+            -DCG_INCLUDE_DIR="C:/deps/cg/include" `
+            -DCG_LIBRARY="C:/deps/cg/lib/x64/cg.lib"
+
+      - name: Build
+        shell: pwsh
+        run: cmake --build $env:BUILD_DIR --config Release --parallel
+
+      - name: Stage runtime DLLs
+        shell: pwsh
+        run: |
+          $out = Join-Path $env:BUILD_DIR "bin"
+          New-Item -ItemType Directory -Force -Path $out | Out-Null
+          Copy-Item C:\deps\fmod\api\core\lib\fmod.dll $out -ErrorAction SilentlyContinue
+          Copy-Item C:\deps\cg\bin\cg.dll $out -ErrorAction SilentlyContinue
+          Copy-Item C:\deps\cg\bin\cgGL.dll $out -ErrorAction SilentlyContinue
+          if (Test-Path C:\deps\dxredist) {
+            Get-ChildItem -Recurse C:\deps\dxredist -Filter d3dx9_43.dll |
+              ForEach-Object { Copy-Item $_.FullName $out }
+            Get-ChildItem -Recurse C:\deps\dxredist -Filter D3DCompiler_43.dll |
+              ForEach-Object { Copy-Item $_.FullName $out }
+          }
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: 372dragon-client-x64-${{ github.sha }}
+          path: ${{ env.BUILD_DIR }}/bin
+          if-no-files-found: warn
