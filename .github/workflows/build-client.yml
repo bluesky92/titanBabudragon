@@ -124,20 +124,21 @@ jobs:
       - name: Patch DirectX 9 Error Functions
         shell: pwsh
         run: |
-          # Quét toàn bộ file mã nguồn của OGRE để sửa lỗi gọi hàm DirectX cũ
+          # Quét toàn bộ file mã nguồn để sửa lỗi hàm DirectX cũ thành hàm mới có đuôi 'A'
           $files = Get-ChildItem -Path "Src/Engine/OGRE" -Recurse -Include *.cpp,*.h
           foreach ($file in $files) {
               $content = Get-Content $file.FullName -Raw
               $modified = $false
               
               if ($content -match "DXGetErrorDescription9") {
+                  # Thay thế cả trường hợp có A và không có A thành DXGetErrorDescriptionA
                   $content = $content -replace "DXGetErrorDescription9A", "DXGetErrorDescriptionA"
-                  $content = $content -replace "DXGetErrorDescription9", "DXGetErrorDescription"
+                  $content = $content -replace "DXGetErrorDescription9", "DXGetErrorDescriptionA"
                   $modified = $true
               }
               if ($content -match "DXGetErrorString9") {
                   $content = $content -replace "DXGetErrorString9A", "DXGetErrorStringA"
-                  $content = $content -replace "DXGetErrorString9", "DXGetErrorString"
+                  $content = $content -replace "DXGetErrorString9", "DXGetErrorStringA"
                   $modified = $true
               }
               
