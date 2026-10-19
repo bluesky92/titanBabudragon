@@ -81,32 +81,32 @@ jobs:
           $ErrorActionPreference = "Stop"
           $workspace = $env:GITHUB_WORKSPACE
           
-          # 1. COPY DIRECTX9 VÀO ĐÚNG THƯ MỤC DỰ ÁN
+          # 1. COPY DIRECTX9 LIBS
           $dxDest = Join-Path $workspace "Src/ThirdParty/DirectX9/Lib/x64"
           New-Item -ItemType Directory -Force -Path $dxDest | Out-Null
           
-          # Copy DxErr.lib và đổi tên thành DxErr9.lib
           if (Test-Path "C:\deps\dxsdk\Lib\x64\DxErr.lib") {
               Copy-Item "C:\deps\dxsdk\Lib\x64\DxErr.lib" -Destination (Join-Path $dxDest "DxErr9.lib") -Force
           }
-          # Copy d3dx9.lib
           if (Test-Path "C:\deps\dxsdk\Lib\x64\d3dx9.lib") {
               Copy-Item "C:\deps\dxsdk\Lib\x64\d3dx9.lib" -Destination $dxDest -Force
           }
           
-          # 2. COPY FMOD VÀO ĐÚNG THƯ MỤC DỰ ÁN YÊU CẦU
+          # 2. COPY DXERR.H VÀO THƯ MỤC HEADER CỦA OGRE
+          $dxIncDest = Join-Path $workspace "Src/Engine/OGRE/RenderSystems/Direct3D9/include"
+          New-Item -ItemType Directory -Force -Path $dxIncDest | Out-Null
+          if (Test-Path "C:\deps\dxsdk\Include\dxerr.h") {
+              Copy-Item "C:\deps\dxsdk\Include\dxerr.h" -Destination $dxIncDest -Force
+          } else {
+              throw "Không tìm thấy dxerr.h trong SDK!"
+          }
+
+          # 3. COPY FMOD 
           $fmodDest = Join-Path $workspace "Src/ThirdParty/_sdk/fmod"
           New-Item -ItemType Directory -Force -Path $fmodDest | Out-Null
-          
           if (Test-Path "C:\deps\fmod\api") {
               Copy-Item "C:\deps\fmod\api" -Destination $fmodDest -Recurse -Force
           }
-
-          # 3. IN RA ĐỂ KIỂM TRA (Nếu không thấy file nào là code sai)
-          Write-Host "=== KIỂM TRA DIRECTX ==="
-          Get-ChildItem -Path $dxDest | Select-Object Name
-          Write-Host "=== KIỂM TRA FMOD ==="
-          Get-ChildItem -Path (Join-Path $fmodDest "api\core") | Select-Object Name
       - name: Auto-fix case-sensitive include typos
         shell: pwsh
         run: |
