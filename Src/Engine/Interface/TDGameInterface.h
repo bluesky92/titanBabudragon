@@ -1,9 +1,7 @@
 #pragma once
-// Trỏ ngược ra ngoài 3 cấp để vào Src/Engine/Interface
-#include "../../../Interface/TDNode.h"
-#include "../../../Interface/TDMath.h"
-// Trỏ ngược ra ngoài 4 cấp để vào Src/Shared/Common
-#include "../../../../Shared/Common/GameDefine2.h"
+#include "TDNode.h"
+#include "TDMath.h"
+#include "../../Shared/Common/GameDefine2.h"
 
 /*
 GameINTerface类
