@@ -121,6 +121,31 @@ jobs:
                   Write-Host "Đã sửa lỗi typo trong file: $($file.Name)"
               }
           }
+      - name: Patch DirectX 9 Error Functions
+        shell: pwsh
+        run: |
+          # Quét toàn bộ file mã nguồn của OGRE để sửa lỗi gọi hàm DirectX cũ
+          $files = Get-ChildItem -Path "Src/Engine/OGRE" -Recurse -Include *.cpp,*.h
+          foreach ($file in $files) {
+              $content = Get-Content $file.FullName -Raw
+              $modified = $false
+              
+              if ($content -match "DXGetErrorDescription9") {
+                  $content = $content -replace "DXGetErrorDescription9A", "DXGetErrorDescriptionA"
+                  $content = $content -replace "DXGetErrorDescription9", "DXGetErrorDescription"
+                  $modified = $true
+              }
+              if ($content -match "DXGetErrorString9") {
+                  $content = $content -replace "DXGetErrorString9A", "DXGetErrorStringA"
+                  $content = $content -replace "DXGetErrorString9", "DXGetErrorString"
+                  $modified = $true
+              }
+              
+              if ($modified) {
+                  Set-Content -Path $file.FullName -Value $content -NoNewline
+                  Write-Host "Đã vá lỗi hàm DirectX trong file: $($file.Name)"
+              }
+          }
       - name: Configure
         shell: pwsh
         run: |
